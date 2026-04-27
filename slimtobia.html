@@ -1,0 +1,399 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Slimtobia</title>
+    <style>
+        :root {
+            --primary: #2b2b2b;
+            --accent: #00a2ff;
+            --bg: #f2f4f5;
+            --card: #ffffff;
+            --text: #333333;
+            --tix: #f1c40f;
+            --bricks: #e74c3c;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0; padding: 0;
+            background-color: var(--bg);
+            color: var(--text);
+            overscroll-behavior-y: contain;
+            overflow: hidden; /* Prevents bouncing on mobile */
+        }
+
+        .hidden { display: none !important; }
+
+        /* Auth Screen */
+        #auth-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; padding: 20px; }
+        .auth-box { background: var(--card); padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 350px; text-align: center; }
+        input { width: 90%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
+        button { width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        
+        /* Layout */
+        header { background: var(--primary); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .currency-display { font-size: 14px; display: flex; gap: 15px; }
+        .tix { color: var(--tix); font-weight: bold;}
+        .bricks { color: var(--bricks); font-weight: bold;}
+
+        nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 10px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 100; }
+        nav button { width: auto; background: none; color: var(--primary); font-size: 11px; padding: 5px; margin: 0; font-weight: normal; border: none;}
+
+        .page { padding: 20px; max-width: 800px; margin: 0 auto; padding-bottom: 80px; height: 90vh; overflow-y: auto;}
+        .card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+
+        /* Shop & Avatar */
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .item-card { border: 1px solid #ddd; border-radius: 8px; padding: 10px; text-align: center; background: #fff; }
+        .item-preview { width: 40px; height: 40px; margin: 0 auto 10px; border-radius: 4px; border: 1px solid #eee; }
+        .price-tag { font-weight: bold; font-size: 14px; margin-bottom: 5px; }
+        
+        .avatar-view { width: 100px; height: 100px; background: #eee; margin: 20px auto; position: relative; border: 2px solid #333; }
+        .hat-layer { position: absolute; top: -10px; left: 10px; width: 80px; height: 20px; z-index: 2; }
+
+        /* Game Engine */
+        #game-container { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: white; z-index: 200; display: flex; flex-direction: column; }
+        #game-logic-area { flex-grow: 1; position: relative; background: #eee; overflow: hidden; }
+        #gameCanvas { display: block; width: 100%; height: 100%; }
+
+        /* FIXED MOBILE CONTROLS */
+        .mobile-ui {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 220px;
+            pointer-events: none; /* Allows clicking through the container */
+            z-index: 300;
+        }
+
+        .dpad {
+            position: absolute;
+            bottom: 30px;
+            left: 20px;
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            grid-template-rows: repeat(3, 60px);
+            gap: 5px;
+            pointer-events: auto;
+        }
+
+        .jump-zone {
+            position: absolute;
+            bottom: 50px;
+            right: 30px;
+            pointer-events: auto;
+        }
+
+        .ctrl-btn { 
+            width: 60px; 
+            height: 60px; 
+            background: rgba(0, 0, 0, 0.4); 
+            border: 2px solid rgba(255,255,255,0.8); 
+            color: white; 
+            border-radius: 50%; 
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        .ctrl-btn:active { background: rgba(0, 162, 255, 0.6); }
+
+    </style>
+</head>
+<body>
+
+    <div id="auth-screen">
+        <div class="auth-box">
+            <h1>Slimtobia</h1>
+            <h2>Imagination Simulated</h2>
+            <div id="login-form">
+                <input type="text" id="login-user" placeholder="Username">
+                <input type="password" id="login-pass" placeholder="Password">
+                <button onclick="login()">Log In</button>
+            </div>
+            <p style="font-size:12px; color:gray;">Admin: <b>slimmy!</b> / <b>pipi</b></p>
+        </div>
+    </div>
+
+    <div id="app-screen" class="hidden">
+        <header>
+            <div style="font-weight: bold;">Slimtobia</div>
+            <div class="currency-display">
+                <span class="tix">Tix: <span id="display-tix">0</span></span>
+                <span class="bricks">Bricks: <span id="display-bricks">0</span></span>
+            </div>
+        </header>
+
+        <div id="page-home" class="page">
+            <h2>Hey, <span id="profile-name">User</span>!</h2>
+            <div class="card" style="text-align:center;">
+                <div id="main-avatar-preview" class="avatar-view"></div>
+                <button onclick="switchPage('avatar')" style="width:auto; padding: 8px 20px;">Edit Avatar</button>
+            </div>
+        </div>
+
+        <div id="page-shop" class="page hidden">
+            <h2>Catalog Shop</h2>
+            <div class="grid" id="shop-list"></div>
+        </div>
+
+        <div id="page-avatar" class="page hidden">
+            <h2>Avatar Editor</h2>
+            <div class="card">
+                <h3>Your Inventory</h3>
+                <div class="grid" id="inventory-list"></div>
+            </div>
+        </div>
+
+        <div id="page-games" class="page hidden">
+            <h2>Popular Games</h2>
+            <div class="card" onclick="openGame('pizza')"><b>🍕 Work at a Pizza Place</b><p>Walk to stations to earn Tix!</p></div>
+            <div class="card" onclick="openGame('obby')"><b>🏁 Mega Easy Obby</b><p>Avoid the red lava to win!</p></div>
+        </div>
+
+        <nav>
+            <button onclick="switchPage('home')">🏠<br>Home</button>
+            <button onclick="switchPage('games')">🎮<br>Games</button>
+            <button onclick="switchPage('shop')">🛒<br>Shop</button>
+            <button onclick="switchPage('avatar')">👕<br>Avatar</button>
+            <button onclick="logout()">🚪<br>Exit</button>
+        </nav>
+    </div>
+
+    <div id="game-container" class="hidden">
+        <div style="background:#222; color:white; padding:10px; display:flex; justify-content:space-between; z-index:400;">
+            <span id="game-title">Game</span>
+            <button onclick="closeGame()" style="background:red; width:auto; padding:5px 15px; margin:0;">Leave</button>
+        </div>
+        <div id="game-logic-area">
+            <canvas id="gameCanvas"></canvas>
+            
+            <div class="mobile-ui">
+                <div class="dpad">
+                    <div></div>
+                    <button class="ctrl-btn" 
+                        ontouchstart="move('up')" ontouchend="stopMove('up')" 
+                        onmousedown="move('up')" onmouseup="stopMove('up')">▲</button>
+                    <div></div>
+                    
+                    <button class="ctrl-btn" 
+                        ontouchstart="move('left')" ontouchend="stopMove('left')" 
+                        onmousedown="move('left')" onmouseup="stopMove('left')">◀</button>
+                    <div></div>
+                    <button class="ctrl-btn" 
+                        ontouchstart="move('right')" ontouchend="stopMove('right')" 
+                        onmousedown="move('right')" onmouseup="stopMove('right')">▶</button>
+                    
+                    <div></div>
+                    <button class="ctrl-btn" 
+                        ontouchstart="move('down')" ontouchend="stopMove('down')" 
+                        onmousedown="move('down')" onmouseup="stopMove('down')">▼</button>
+                    <div></div>
+                </div>
+
+                <div class="jump-zone">
+                    <button class="ctrl-btn" style="width:80px; height:80px; background:rgba(0,162,255,0.5);" 
+                        ontouchstart="doAction()" onmousedown="doAction()">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA & STATE ---
+        const SHOP_ITEMS = [
+            { id: 'red', name: 'Red Skin', price: 50, type: 'color', value: '#ff4d4d' },
+            { id: 'gold', name: 'Gold Skin', price: 500, type: 'color', value: '#ffd700' },
+            { id: 'neon', name: 'Neon Green', price: 100, type: 'color', value: '#39ff14' },
+            { id: 'tophat', name: 'Black Top Hat', price: 150, type: 'hat', value: '#000000' },
+            { id: 'crown', name: 'King Crown', price: 10, type: 'hat', value: 'bricks' },
+        ];
+
+        let usersDB = {
+            'slimmy!': { password: 'pipi', tix: 9999, bricks: 999, inventory: ['red', 'gold', 'tophat', 'neon'], equipped: { color: '#ffd700', hat: 'tophat' } }
+        };
+
+        let currentUser = null;
+        let canvas, ctx, animationId;
+        let keys = {};
+        let player = { x: 50, y: 50, w: 30, h: 30 };
+        let gameObjects = [];
+        let currentTask = 0;
+
+        // --- AUTH ---
+        function login() {
+            let user = document.getElementById('login-user').value.trim();
+            let pass = document.getElementById('login-pass').value;
+            if (usersDB[user] && usersDB[user].password === pass) {
+                currentUser = usersDB[user];
+                currentUser.username = user;
+                if(!currentUser.equipped) currentUser.equipped = { color: '#00a2ff', hat: null };
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('app-screen').classList.remove('hidden');
+                updateUI();
+                switchPage('home');
+            } else { alert("Error: Try slimmy! / pipi"); }
+        }
+
+        function updateUI() {
+            document.getElementById('profile-name').innerText = currentUser.username;
+            document.getElementById('display-tix').innerText = currentUser.tix;
+            document.getElementById('display-bricks').innerText = currentUser.bricks;
+            
+            const prev = document.getElementById('main-avatar-preview');
+            prev.style.backgroundColor = currentUser.equipped.color;
+            prev.innerHTML = currentUser.equipped.hat ? `<div class="hat-layer" style="background:${getHatColor(currentUser.equipped.hat)}"></div>` : '';
+
+            renderShop();
+            renderInventory();
+        }
+
+        function getHatColor(hatId) {
+            let item = SHOP_ITEMS.find(i => i.id === hatId);
+            return item ? (item.value === 'bricks' ? '#f1c40f' : item.value) : 'transparent';
+        }
+
+        function switchPage(pageId) {
+            document.querySelectorAll('.page').forEach(el => el.classList.add('hidden'));
+            document.getElementById('page-' + pageId).classList.remove('hidden');
+        }
+
+        // --- SHOP & AVATAR ---
+        function renderShop() {
+            let html = '';
+            SHOP_ITEMS.forEach(item => {
+                let owned = currentUser.inventory.includes(item.id);
+                html += `<div class="item-card">
+                    <div class="item-preview" style="background:${item.type === 'color' ? item.value : '#ddd'}"></div>
+                    <div style="font-size:12px;">${item.name}</div>
+                    <div class="price-tag">${item.price} ${item.value === 'bricks' ? 'Bricks' : 'Tix'}</div>
+                    <button onclick="buyItem('${item.id}')" ${owned ? 'disabled' : ''}>${owned ? 'Owned' : 'Buy'}</button>
+                </div>`;
+            });
+            document.getElementById('shop-list').innerHTML = html;
+        }
+
+        function buyItem(id) {
+            let item = SHOP_ITEMS.find(i => i.id === id);
+            let cur = item.value === 'bricks' ? 'bricks' : 'tix';
+            if (currentUser[cur] >= item.price) {
+                currentUser[cur] -= item.price;
+                currentUser.inventory.push(id);
+                updateUI();
+            } else { alert("Need more " + cur); }
+        }
+
+        function renderInventory() {
+            let html = '';
+            currentUser.inventory.forEach(itemId => {
+                let item = SHOP_ITEMS.find(i => i.id === itemId);
+                let isEquipped = (currentUser.equipped.color === item.value || currentUser.equipped.hat === item.id);
+                html += `<div class="item-card">
+                    <div style="font-size:12px;">${item.name}</div>
+                    <button onclick="equipItem('${item.id}')" style="background:${isEquipped ? '#2ecc71' : '#00a2ff'}">${isEquipped ? 'Equipped' : 'Equip'}</button>
+                </div>`;
+            });
+            document.getElementById('inventory-list').innerHTML = html;
+        }
+
+        function equipItem(id) {
+            let item = SHOP_ITEMS.find(i => i.id === id);
+            if (item.type === 'color') currentUser.equipped.color = item.value;
+            if (item.type === 'hat') currentUser.equipped.hat = item.id;
+            updateUI();
+        }
+
+        // --- GAME ENGINE ---
+        window.addEventListener('keydown', e => keys[e.code] = true);
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        function move(dir) { keys[dir] = true; }
+        function stopMove(dir) { keys[dir] = false; }
+        function doAction() { console.log("Action Pressed"); }
+
+        function openGame(gameType) {
+            document.getElementById('game-container').classList.remove('hidden');
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            let area = document.getElementById('game-logic-area');
+            canvas.width = area.clientWidth;
+            canvas.height = area.clientHeight;
+            player.x = 50; player.y = canvas.height / 2;
+            currentTask = 0;
+            
+            if (gameType === 'pizza') initPizzaGame();
+            else initObbyGame();
+            gameLoop(gameType);
+        }
+
+        function initPizzaGame() {
+            gameObjects = [
+                { x: 50, y: 50, w: 60, h: 60, color: '#f3e5ab', label: 'Dough', id: 0 },
+                { x: 220, y: 50, w: 60, h: 60, color: '#e74c3c', label: 'Sauce', id: 1 },
+                { x: 50, y: canvas.height - 250, w: 60, h: 60, color: '#555', label: 'Oven', id: 2 },
+                { x: 220, y: canvas.height - 250, w: 60, h: 60, color: '#2ecc71', label: 'Deliver', id: 3 }
+            ];
+        }
+
+        function initObbyGame() {
+            gameObjects = [
+                { x: 120, y: 0, w: 40, h: canvas.height - 200, type: 'lava' },
+                { x: 240, y: 150, w: 40, h: canvas.height, type: 'lava' },
+                { x: canvas.width - 80, y: canvas.height/2 - 100, w: 60, h: 80, type: 'goal', label: 'Finish' }
+            ];
+        }
+
+        function gameLoop(type) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let speed = 5;
+            if (keys['ArrowUp'] || keys['KeyW'] || keys['up']) player.y -= speed;
+            if (keys['ArrowDown'] || keys['KeyS'] || keys['down']) player.y += speed;
+            if (keys['ArrowLeft'] || keys['KeyA'] || keys['left']) player.x -= speed;
+            if (keys['ArrowRight'] || keys['KeyD'] || keys['right']) player.x += speed;
+
+            // Bounds
+            if(player.x < 0) player.x = 0;
+            if(player.y < 0) player.y = 0;
+            if(player.x > canvas.width - player.w) player.x = canvas.width - player.w;
+            if(player.y > canvas.height - player.h) player.y = canvas.height - player.h;
+
+            gameObjects.forEach(obj => {
+                ctx.fillStyle = obj.color || (obj.type === 'lava' ? '#e74c3c' : '#f1c40f');
+                ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+                if(obj.label) { ctx.fillStyle="#000"; ctx.fillText(obj.label, obj.x, obj.y-5); }
+
+                if (player.x < obj.x + obj.w && player.x + player.w > obj.x && player.y < obj.y + obj.h && player.y + player.h > obj.y) {
+                    if (type === 'pizza' && obj.id === currentTask) {
+                        currentTask++;
+                        if (currentTask > 3) { currentUser.tix += 20; currentTask = 0; updateUI(); }
+                    }
+                    if (type === 'obby') {
+                        if (obj.type === 'lava') { player.x = 50; player.y = canvas.height/2; }
+                        if (obj.type === 'goal') { currentUser.tix += 50; player.x = 50; updateUI(); alert("Win! +50 Tix"); }
+                    }
+                }
+            });
+
+            // Player
+            ctx.fillStyle = currentUser.equipped.color;
+            ctx.fillRect(player.x, player.y, player.w, player.h);
+            if (currentUser.equipped.hat) {
+                ctx.fillStyle = getHatColor(currentUser.equipped.hat);
+                ctx.fillRect(player.x - 5, player.y - 10, player.w + 10, 10);
+            }
+
+            animationId = requestAnimationFrame(() => gameLoop(type));
+        }
+
+        function closeGame() { cancelAnimationFrame(animationId); document.getElementById('game-container').classList.add('hidden'); }
+        function logout() { location.reload(); }
+    </script>
+</body>
+</html>
